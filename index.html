@@ -40,13 +40,20 @@
       <div class="results-head"><div><span class="eyebrow">תוצאה מחושבת · אומדן בלבד</span><h2 id="results-title">השבת הקרובה לבחירה</h2></div><span class="estimate-tag">לא לשימוש הלכתי מעשי</span></div>
       <div class="date-summary"><strong id="display-date">—</strong><span id="display-place">בחר מיקום ולחץ על חישוב</span></div>
       <div class="times">
+        <article class="time-card"><div><span class="time-label">יום שישי</span><h3>זריחה משוערת</h3><p>אירוע אסטרונומי, אינו זמן הלכתי מחייב</p></div><strong id="friday-sunrise">--:--</strong></article>
         <article class="time-card"><div><span class="time-label">יום שישי</span><h3>שקיעה משוערת</h3><p>חישוב לפי קו רוחב ואורך</p></div><strong id="friday-sunset">--:--</strong></article>
         <article class="time-card featured"><div><span class="time-label">יום שישי</span><h3>הדלקת נרות — אומדן</h3><p id="candle-description">דקות לפני השקיעה, לפי בחירתך</p></div><strong id="candle-time">--:--</strong></article>
+        <article class="time-card"><div><span class="time-label">יום שבת</span><h3>זריחה משוערת</h3><p>אירוע אסטרונומי, אינו זמן הלכתי מחייב</p></div><strong id="saturday-sunrise">--:--</strong></article>
         <article class="time-card"><div><span class="time-label">מוצאי שבת</span><h3>שקיעה משוערת</h3><p>יום שבת באותו המיקום</p></div><strong id="saturday-sunset">--:--</strong></article>
         <article class="time-card featured"><div><span class="time-label">מוצאי שבת</span><h3>הבדלה — אומדן</h3><p id="havdalah-description">דקות לאחר השקיעה, לפי בחירתך</p></div><strong id="havdalah-time">--:--</strong></article>
       </div>
+      <div class="daylight-summary" aria-label="משך אור יום משוער">
+        <span><strong>אורך יום שישי:</strong> <output id="friday-daylight">—</output></span>
+        <span><strong>אורך יום שבת:</strong> <output id="saturday-daylight">—</output></span>
+        <span><strong>שינוי באורך היום:</strong> <output id="daylight-change">—</output></span>
+      </div>
       <div class="actions"><button type="button" id="copy" disabled class="button secondary">העתק סיכום</button><button type="button" id="calendar" disabled class="button secondary">↓ הוסף ליומן (ICS)</button><button type="button" id="print" disabled class="button secondary">הדפס</button></div>
-      <p class="qualification">זמני השקיעה משוערים בשיטה אסטרונומית סטנדרטית, אינם כוללים גובה טופוגרפי, תנאים אטמוספריים או כללי פסיקה. אין חישוב ימי חג, זמני צאת הכוכבים לפי מעלות, רבנו תם או לוחות קהילתיים.</p>
+      <p class="qualification">זמני הזריחה והשקיעה משוערים בשיטה אסטרונומית סטנדרטית, אינם כוללים גובה טופוגרפי, תנאים אטמוספריים או כללי פסיקה. אין חישוב ימי חג, זמני צאת הכוכבים לפי מעלות, רבנו תם או לוחות קהילתיים.</p>
     </section>
   </div>
   <section class="features"><article><span>☼</span><h3>מיקום ואזור זמן</h3><p>מיקומים נפוצים או קואורדינטות לכל מקום, עם טיפול בשעון קיץ לפי אזור זמן IANA.</p></article><article><span>◇</span><h3>ללא רשת</h3><p>החישוב נעשה במכשיר, ללא איתור מיקום אוטומטי, ללא חשבון וללא העברת מיקומך לשרת.</p></article><article><span>▤</span><h3>שליטה בהגדרות</h3><p>הפרש הדקות נקבע ידנית ומופיע בתוצאה כדי שלא יתפרש כזמן מוסמך.</p></article></section>
