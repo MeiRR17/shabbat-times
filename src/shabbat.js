@@ -40,13 +40,26 @@ export function calculateShabbat({
   validateOffset('Havdalah offset',havdalahMinutes,0,180);
   const saturday=addCalendarDays(friday,1);
   const location={ latitude,longitude,timeZone };
+  const fridaySunrise=solarEventOnDate({ ...location,date:friday,kind:'sunrise' });
   const fridaySunset=solarEventOnDate({ ...location,date:friday,kind:'sunset' });
+  const saturdaySunrise=solarEventOnDate({ ...location,date:saturday,kind:'sunrise' });
   const saturdaySunset=solarEventOnDate({ ...location,date:saturday,kind:'sunset' });
+  const fridayDaylightMinutes=Math.round((fridaySunset-fridaySunrise)/60_000);
+  const saturdayDaylightMinutes=Math.round((saturdaySunset-saturdaySunrise)/60_000);
+  if(fridayDaylightMinutes<=0 || fridayDaylightMinutes>1440 ||
+     saturdayDaylightMinutes<=0 || saturdayDaylightMinutes>1440) {
+    throw new RangeError('Inconsistent sunrise/sunset order for this location and timezone.');
+  }
   return {
     friday,saturday,latitude,longitude,timeZone,candleMinutes,havdalahMinutes,
+    fridaySunrise,
     fridaySunset,
+    fridayDaylightMinutes,
     candleLighting:new Date(fridaySunset.getTime()-candleMinutes*60_000),
+    saturdaySunrise,
     saturdaySunset,
+    saturdayDaylightMinutes,
+    daylightChangeMinutes:saturdayDaylightMinutes-fridayDaylightMinutes,
     havdalah:new Date(saturdaySunset.getTime()+havdalahMinutes*60_000),
     approximation:true,
   };
