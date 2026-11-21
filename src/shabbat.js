@@ -65,13 +65,42 @@ export function calculateShabbat({
   };
 }
 function icalDate(date) {
+  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
+    throw new TypeError('Expected a valid UTC calendar event.');
+  }
   return date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
 }
 function icalText(text) {
   return String(text).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
 }
+
+// RFC 5545 limits each physical content line to 75 UTF-8 octets.
+// Fold by code point, counting the leading continuation space as one octet.
+const encoder = new TextEncoder();
+export function foldIcsLine(line) {
+  if (typeof line !== 'string' || /[\r\n]/u.test(line)) {
+    throw new TypeError('ICS content lines must not contain raw line breaks.');
+  }
+  let physical = '', current = '', bytes = 0;
+  for (const point of line) {
+    const width = encoder.encode(point).length;
+    if (current && bytes + width > 75) {
+      physical += current + '\r\n ';
+      current = '';
+      bytes = 1;
+    }
+    current += point;
+    bytes += width;
+  }
+  return physical + current;
+}
 /** Optional calendar export with absolute UTC instants and clear draft labels. */
 export function toIcs(result,cityName='') {
+  if (!result || typeof result !== 'object') throw new TypeError('Expected a Shabbat estimate.');
+  parseDay(result.friday);
+  if (typeof cityName !== 'string' || cityName.length > 150) {
+    throw new RangeError('City label must be 150 characters or fewer.');
+  }
   const events=[
     { start:result.candleLighting, label:'הדלקת נרות — אומדן בלבד' },
     { start:result.havdalah, label:'הבדלה — אומדן בלבד' },
@@ -91,5 +120,5 @@ export function toIcs(result,cityName='') {
       'END:VEVENT');
   });
   lines.push('END:VCALENDAR');
-  return lines.join('\r\n')+'\r\n';
+  return lines.map(foldIcsLine).join('\r\n')+'\r\n';
 }
