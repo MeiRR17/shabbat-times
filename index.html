@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#11243c">
+<meta name="description" content="מחשבון מקומי לאומדן שקיעה, הדלקת נרות והבדלה לפי עיר ותאריך. אינו מחליף לוח זמני הלכה מוסמך.">
+<title>Shabbat Times — אומדן זמני שבת לפי מיקום</title>
+<link rel="stylesheet" href="./styles.css"><script type="module" src="./app.js"></script>
+</head>
+<body>
+<header class="topbar"><a href="./" class="brand"><span class="logo" aria-hidden="true">☼</span><strong>shabbat<span>times</span></strong><small>מחשבון שקיעה</small></a><a href="https://github.com/MeiRR17/shabbat-times" target="_blank" rel="noopener noreferrer">GitHub ↗</a></header>
+<main class="shell">
+  <section class="hero">
+    <div class="eyebrow">זמני שמש מקומיים · חישוב במכשיר · ללא שרת</div>
+    <h1>מתכננים שבת. <em>בבהירות.</em></h1>
+    <p>מחשבים אומדן שקיעה וזמנים הנגזרים ממנה, לפי מיקום גאוגרפי ואזור זמן. אפשר להגדיר את מספר הדקות לפני השקיעה ואחריה, בהתאם למנהג שבדקת.</p>
+    <p class="important"><strong>לתשומת לב:</strong> התוצאות הן אומדן אסטרונומי להמחשה, ולא זמני הלכה מוסמכים. לפני כניסת שבת והבדלה יש להשתמש בלוח מקומי מוסמך ולברר את המנהג המתאים. אין להסתמך על האומדן הזה למעשה.</p>
+  </section>
+  <div class="workspace">
+    <section class="panel controls" aria-labelledby="settings-title">
+      <div class="heading"><span class="step">01</span><div><h2 id="settings-title">בחירת מיקום</h2><p>בחר עיר או הזן קואורדינטות ואזור זמן.</p></div></div>
+      <label class="field">עיר <select id="city"><option value="custom">מיקום מותאם אישית</option></select></label>
+      <div id="custom-location" class="custom-location" hidden>
+        <div class="field-grid"><label class="field">קו רוחב <input id="latitude" inputmode="decimal" type="number" min="-90" max="90" step=".000001" value="31.7683"></label><label class="field">קו אורך <input id="longitude" inputmode="decimal" type="number" min="-180" max="180" step=".000001" value="35.2137"></label></div>
+        <label class="field">אזור זמן IANA <input id="timezone" type="text" maxlength="120" value="Asia/Jerusalem" dir="ltr" spellcheck="false" placeholder="Asia/Jerusalem"></label>
+        <p class="hint">לדוגמה: Asia/Jerusalem, America/New_York. יש להזין את אזור הזמן האמיתי של המיקום לצורך שעון קיץ.</p>
+      </div>
+      <div class="section-divider"></div>
+      <div class="heading small"><span class="step">02</span><div><h2>תאריך והגדרות</h2><p>חישוב אוטומטי ליום שישי הקרוב לתאריך שתבחר.</p></div></div>
+      <label class="field">תאריך ייחוס <input id="reference-date" type="date"></label>
+      <div class="field-grid">
+        <label class="field">הדלקת נרות — דקות <strong>לפני</strong> השקיעה <input id="candle-minutes" type="number" min="0" max="120" step="1" value="20"></label>
+        <label class="field">הבדלה — דקות <strong>אחרי</strong> השקיעה <input id="havdalah-minutes" type="number" min="0" max="180" step="1" value="50"></label>
+      </div>
+      <p class="hint">הדקות הן הגדרה שהמשתמש בוחר; הן אינן קובעות את המנהג ההלכתי. הערכים הראשוניים הם דוגמאות ויש לאמתם לפי הקהילה והעיר.</p>
+      <button id="calculate" type="button" class="button primary">חשב אומדן זמנים ←</button>
+      <p id="message" role="status" aria-live="polite" class="message"></p>
+    </section>
+    <section class="panel results" aria-labelledby="results-title">
+      <div class="results-head"><div><span class="eyebrow">תוצאה מחושבת · אומדן בלבד</span><h2 id="results-title">השבת הקרובה לבחירה</h2></div><span class="estimate-tag">לא לשימוש הלכתי מעשי</span></div>
+      <div class="date-summary"><strong id="display-date">—</strong><span id="display-place">בחר מיקום ולחץ על חישוב</span></div>
+      <div class="times">
+        <article class="time-card"><div><span class="time-label">יום שישי</span><h3>שקיעה משוערת</h3><p>חישוב לפי קו רוחב ואורך</p></div><strong id="friday-sunset">--:--</strong></article>
+        <article class="time-card featured"><div><span class="time-label">יום שישי</span><h3>הדלקת נרות — אומדן</h3><p id="candle-description">דקות לפני השקיעה, לפי בחירתך</p></div><strong id="candle-time">--:--</strong></article>
+        <article class="time-card"><div><span class="time-label">מוצאי שבת</span><h3>שקיעה משוערת</h3><p>יום שבת באותו המיקום</p></div><strong id="saturday-sunset">--:--</strong></article>
+        <article class="time-card featured"><div><span class="time-label">מוצאי שבת</span><h3>הבדלה — אומדן</h3><p id="havdalah-description">דקות לאחר השקיעה, לפי בחירתך</p></div><strong id="havdalah-time">--:--</strong></article>
+      </div>
+      <div class="actions"><button type="button" id="copy" disabled class="button secondary">העתק סיכום</button><button type="button" id="calendar" disabled class="button secondary">↓ הוסף ליומן (ICS)</button><button type="button" id="print" disabled class="button secondary">הדפס</button></div>
+      <p class="qualification">זמני השקיעה משוערים בשיטה אסטרונומית סטנדרטית, אינם כוללים גובה טופוגרפי, תנאים אטמוספריים או כללי פסיקה. אין חישוב ימי חג, זמני צאת הכוכבים לפי מעלות, רבנו תם או לוחות קהילתיים.</p>
+    </section>
+  </div>
+  <section class="features"><article><span>☼</span><h3>מיקום ואזור זמן</h3><p>מיקומים נפוצים או קואורדינטות לכל מקום, עם טיפול בשעון קיץ לפי אזור זמן IANA.</p></article><article><span>◇</span><h3>ללא רשת</h3><p>החישוב נעשה במכשיר, ללא איתור מיקום אוטומטי, ללא חשבון וללא העברת מיקומך לשרת.</p></article><article><span>▤</span><h3>שליטה בהגדרות</h3><p>הפרש הדקות נקבע ידנית ומופיע בתוצאה כדי שלא יתפרש כזמן מוסמך.</p></article></section>
+  <p class="reference">לזמנים מעשיים יש לעיין במקורות מוסמכים כגון <a href="https://www.hebcal.com/shabbat" target="_blank" rel="noopener noreferrer">Hebcal</a> או בלוח הקהילה המקומית. הפרויקט אינו קשור ל־Hebcal.</p>
+</main>
+<footer><span>Shabbat Times · פרויקט קוד פתוח</span><span>פותח בידי <a href="https://github.com/MeiRR17" rel="noopener noreferrer" target="_blank">Meir Dvir</a></span></footer>
+</body></html>
