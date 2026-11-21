@@ -42,6 +42,11 @@ function nearestFriday(){
 function disableOutput(){
   current=null;summary='';
   for(const id of ['copy','calendar','print'])$(id).disabled=true;
+  for(const id of ['friday-sunrise','friday-sunset','candle-time',
+    'saturday-sunrise','saturday-sunset','havdalah-time'])$(id).textContent='--:--';
+  for(const id of ['friday-daylight','saturday-daylight','daylight-change'])$(id).textContent='—';
+  $('display-date').textContent='—';
+  $('display-place').textContent='בחר מיקום ולחץ על חישוב';
 }
 function updateCity(){
   const preset=CITIES.find(item=>item.id===city.value);
@@ -55,6 +60,15 @@ function updateCity(){
   nearestFriday();
   disableOutput();
   status('המיקום עודכן. לחץ על חישוב להצגת אומדן זמנים.');
+}
+function durationLabel(minutes) {
+  const hours=Math.floor(minutes/60);
+  const remainder=minutes%60;
+  return hours+' שעות ו־'+remainder+' דקות';
+}
+function changeLabel(minutes){
+  if(minutes===0)return 'ללא שינוי';
+  return (minutes>0?'+':'−')+Math.abs(minutes)+' דקות';
 }
 function display(){
   try{
@@ -72,19 +86,28 @@ function display(){
     $('reference-date').value=friday;
     $('display-date').textContent='יום שישי, '+formatHebDate(friday)+' – שבת, '+formatHebDate(calculated.saturday);
     $('display-place').textContent=place.name+' · '+place.timeZone;
+    $('friday-sunrise').textContent=localClock(calculated.fridaySunrise,place.timeZone);
     $('friday-sunset').textContent=localClock(calculated.fridaySunset,place.timeZone);
     $('candle-time').textContent=localClock(calculated.candleLighting,place.timeZone);
+    $('saturday-sunrise').textContent=localClock(calculated.saturdaySunrise,place.timeZone);
     $('saturday-sunset').textContent=localClock(calculated.saturdaySunset,place.timeZone);
     $('havdalah-time').textContent=localClock(calculated.havdalah,place.timeZone);
+    $('friday-daylight').textContent=durationLabel(calculated.fridayDaylightMinutes);
+    $('saturday-daylight').textContent=durationLabel(calculated.saturdayDaylightMinutes);
+    $('daylight-change').textContent=changeLabel(calculated.daylightChangeMinutes);
     $('candle-description').textContent=candleMinutes+' דקות לפני השקיעה (לפי בחירתך)';
     $('havdalah-description').textContent=havdalahMinutes+' דקות לאחר השקיעה (לפי בחירתך)';
     summary=[
       'אומדן זמני שבת — לא לשימוש הלכתי מעשי',
       place.name+' ('+place.timeZone+')',
-      'שישי '+friday+': שקיעה '+$('friday-sunset').textContent+
+      'שישי '+friday+': זריחה '+$('friday-sunrise').textContent+
+        ', שקיעה '+$('friday-sunset').textContent+
         ', הדלקת נרות '+$('candle-time').textContent+' ('+candleMinutes+' דקות לפני השקיעה)',
-      'שבת '+calculated.saturday+': שקיעה '+$('saturday-sunset').textContent+
+      'שבת '+calculated.saturday+': זריחה '+$('saturday-sunrise').textContent+
+        ', שקיעה '+$('saturday-sunset').textContent+
         ', הבדלה '+$('havdalah-time').textContent+' ('+havdalahMinutes+' דקות לאחר השקיעה)',
+      'משך אור יום משוער: שישי '+$('friday-daylight').textContent+', שבת '+$('saturday-daylight').textContent+
+        ', שינוי '+$('daylight-change').textContent+'.',
       'הנתונים מחושבים בקירוב בלבד. חובה לאמת בלוח מקומי מוסמך.',
     ].join('\n');
     for(const id of ['copy','calendar','print'])$(id).disabled=false;
@@ -111,7 +134,7 @@ city.value='jerusalem';
 city.addEventListener('change',updateCity);
 $('calculate').addEventListener('click',display);
 for(const id of ['latitude','longitude','timezone','reference-date','candle-minutes','havdalah-minutes']){
-  $(id).addEventListener('change',()=>{
+  for(const eventName of ['change','input'])$(id).addEventListener(eventName,()=>{
     disableOutput();
     status('ההגדרות השתנו. יש לחשב מחדש.');
   });
