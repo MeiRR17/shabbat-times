@@ -5,6 +5,7 @@ const $=id=>document.getElementById(id);
 const city=$('city');
 let current=null,displayName='';
 let summary='';
+let outputRevision=0; // Invalidates pending clipboard responses after edits.
 const formatter=new Intl.DateTimeFormat('he-IL',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
 
 function status(text,error=false){
@@ -40,6 +41,7 @@ function nearestFriday(){
   }
 }
 function disableOutput(){
+  outputRevision++;
   current=null;summary='';
   for(const id of ['copy','calendar','print'])$(id).disabled=true;
   for(const id of ['friday-sunrise','friday-sunset','candle-time',
@@ -66,6 +68,12 @@ function durationLabel(minutes) {
   const remainder=minutes%60;
   return hours+' שעות ו־'+remainder+' דקות';
 }
+// Explicitly disclose civil-day rollover for estimates near midnight.
+function zonedEventLabel(instant, expectedDay, timeZone){
+  const actualDay=dayInTimeZone(instant,timeZone);
+  const clock=localClock(instant,timeZone);
+  return actualDay===expectedDay?clock:clock+' ('+actualDay+')';
+}
 function changeLabel(minutes){
   if(minutes===0)return 'ללא שינוי';
   return (minutes>0?'+':'−')+Math.abs(minutes)+' דקות';
@@ -86,12 +94,12 @@ function display(){
     $('reference-date').value=friday;
     $('display-date').textContent='יום שישי, '+formatHebDate(friday)+' – שבת, '+formatHebDate(calculated.saturday);
     $('display-place').textContent=place.name+' · '+place.timeZone;
-    $('friday-sunrise').textContent=localClock(calculated.fridaySunrise,place.timeZone);
-    $('friday-sunset').textContent=localClock(calculated.fridaySunset,place.timeZone);
-    $('candle-time').textContent=localClock(calculated.candleLighting,place.timeZone);
-    $('saturday-sunrise').textContent=localClock(calculated.saturdaySunrise,place.timeZone);
-    $('saturday-sunset').textContent=localClock(calculated.saturdaySunset,place.timeZone);
-    $('havdalah-time').textContent=localClock(calculated.havdalah,place.timeZone);
+    $('friday-sunrise').textContent=zonedEventLabel(calculated.fridaySunrise,friday,place.timeZone);
+    $('friday-sunset').textContent=zonedEventLabel(calculated.fridaySunset,friday,place.timeZone);
+    $('candle-time').textContent=zonedEventLabel(calculated.candleLighting,friday,place.timeZone);
+    $('saturday-sunrise').textContent=zonedEventLabel(calculated.saturdaySunrise,calculated.saturday,place.timeZone);
+    $('saturday-sunset').textContent=zonedEventLabel(calculated.saturdaySunset,calculated.saturday,place.timeZone);
+    $('havdalah-time').textContent=zonedEventLabel(calculated.havdalah,calculated.saturday,place.timeZone);
     $('friday-daylight').textContent=durationLabel(calculated.fridayDaylightMinutes);
     $('saturday-daylight').textContent=durationLabel(calculated.saturdayDaylightMinutes);
     $('daylight-change').textContent=changeLabel(calculated.daylightChangeMinutes);
@@ -141,11 +149,18 @@ for(const id of ['latitude','longitude','timezone','reference-date','candle-minu
 }
 $('copy').addEventListener('click',async()=>{
   if(!current)return;
+  const revision=outputRevision;
+  const text=summary;
   try{
-    await navigator.clipboard.writeText(summary);
+    await navigator.clipboard.writeText(text);
+    if(revision!==outputRevision){
+      status('ההעתקה הסתיימה עבור אומדן קודם. ייתכן שהוא עדיין בלוח ההעתקה; יש לחשב מחדש ולהעתיק את התוצאה המעודכנת.',true);
+      return;
+    }
     status('האומדן הועתק, יחד עם אזהרת אי־ההסתמכות.');
   }catch{
-    status('אין גישה ללוח ההעתקה בדפדפן. נסה להעתיק ידנית.',true);
+    if(revision===outputRevision)
+      status('אין גישה ללוח ההעתקה בדפדפן. נסה להעתיק ידנית.',true);
   }
 });
 $('calendar').addEventListener('click',()=>{
