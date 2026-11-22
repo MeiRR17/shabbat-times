@@ -1,4 +1,4 @@
-import { CITIES, upcomingFriday, calculateShabbat, toIcs, estimateJson } from './src/shabbat.js';
+import { CITIES, upcomingFriday, calculateShabbat, toIcs, estimateJson, estimateCsv } from './src/shabbat.js';
 import { dayInTimeZone, localClock } from './src/solar.js';
 
 const $=id=>document.getElementById(id);
@@ -43,7 +43,7 @@ function nearestFriday(){
 function disableOutput(){
   outputRevision++;
   current=null;summary='';
-  for(const id of ['copy','text-export','json-export','calendar','print'])$(id).disabled=true;
+  for(const id of ['copy','text-export','json-export','csv-export','calendar','print'])$(id).disabled=true;
   for(const id of ['friday-sunrise','friday-sunset','candle-time',
     'saturday-sunrise','saturday-sunset','havdalah-time'])$(id).textContent='--:--';
   for(const id of ['friday-daylight','saturday-daylight','daylight-change'])$(id).textContent='—';
@@ -118,7 +118,7 @@ function display(){
         ', שינוי '+$('daylight-change').textContent+'.',
       'הנתונים מחושבים בקירוב בלבד. חובה לאמת בלוח מקומי מוסמך.',
     ].join('\n');
-    for(const id of ['copy','text-export','json-export','calendar','print'])$(id).disabled=false;
+    for(const id of ['copy','text-export','json-export','csv-export','calendar','print'])$(id).disabled=false;
     status('חושב אומדן אסטרונומי ליום שישי '+friday+'. יש לאמת זמנים הלכתיים במקור מוסמך.');
   }catch(error){
     disableOutput();
@@ -178,6 +178,16 @@ $('json-export').addEventListener('click',()=>{
     status('נשמר דוח JSON אסטרונומי המסומן כאומדן בלבד, לא לזמני שבת מעשיים.');
   }catch(error){
     status('ייצוא ה־JSON נכשל: '+error.message,true);
+  }
+});
+$('csv-export').addEventListener('click',()=>{
+  if(!current)return;
+  try{
+    download(estimateCsv(current),
+      'shabbat-times-estimate-'+current.friday+'.csv','text/csv;charset=utf-8');
+    status('CSV עם אומדני זמנים בלבד נשמר ללא שם מקום וקואורדינטות. אין להשתמש בו לזמני הלכה למעשה.');
+  }catch{
+    status('ייצוא CSV נכשל. יש לחשב מחדש לפני ניסיון נוסף.',true);
   }
 });
 $('calendar').addEventListener('click',()=>{

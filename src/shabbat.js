@@ -200,3 +200,43 @@ export function estimateJson(result, cityName = '') {
     limitations: 'Ignores elevation, terrain, local atmosphere and halachic definitions of nightfall. Not an authority for candle lighting or Havdalah.',
   }, null, 2) + '\n';
 }
+
+
+/**
+ * Spreadsheet export of approximate astronomical event instants.
+ * Uses the same bounded, previously validated model as estimateJson(), but
+ * intentionally does NOT include the label or exact latitude/longitude.
+ * Absolute times and timezone still reveal approximate geographical context.
+ * CSV is not a halachic calendar or suitable for real-world ritual decisions.
+ */
+export function estimateCsv(result) {
+  const snapshot = JSON.parse(estimateJson(result)); // validated model, blank city label
+  const events = [
+    ['friday_sunrise', snapshot.events.fridaySunrise, ''],
+    ['friday_sunset', snapshot.events.fridaySunset, ''],
+    ['candle_lighting_estimate', snapshot.events.candleLightingEstimate,
+      -snapshot.userSelectedOffsetsMinutes.candleBeforeFridaySunset],
+    ['saturday_sunrise', snapshot.events.saturdaySunrise, ''],
+    ['saturday_sunset', snapshot.events.saturdaySunset, ''],
+    ['havdalah_estimate', snapshot.events.havdalahEstimate,
+      snapshot.userSelectedOffsetsMinutes.havdalahAfterSaturdaySunset],
+  ];
+  const cell = value => {
+    let content = String(value);
+    // Prevent a user-controlled timezone token from becoming a formula in
+    // spreadsheet applications that trim leading whitespace and control marks.
+    if (/^[\s\u200B\u200E\u200F\uFEFF]*[=+\-@]/u.test(content)) content = "'" + content;
+    return '"' + content.replaceAll('"', '""') + '"';
+  };
+  const rows = [[
+    'event', 'utc_instant', 'local_date', 'local_clock', 'timezone',
+    'offset_minutes_from_sunset', 'approximate', 'not_for_halachic_decisions',
+  ]];
+  for (const [name, instant, offset] of events) {
+    rows.push([
+      name, instant.utc, instant.localDate, instant.localClock,
+      snapshot.location.timeZone, offset, 'true', 'true',
+    ]);
+  }
+  return '\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
+}
