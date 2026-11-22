@@ -1,4 +1,4 @@
-import { addCalendarDays, parseDay, solarEventOnDate } from './solar.js';
+import { addCalendarDays, dayInTimeZone, localClock, parseDay, solarEventOnDate } from './solar.js';
 
 export const CITIES = Object.freeze([
   { id:'jerusalem', name:'ירושלים', latitude:31.7683, longitude:35.2137, timeZone:'Asia/Jerusalem', candle:40 },
@@ -121,4 +121,82 @@ export function toIcs(result,cityName='') {
   });
   lines.push('END:VCALENDAR');
   return lines.map(foldIcsLine).join('\r\n')+'\r\n';
+}
+
+
+/**
+ * Machine-readable astronomical estimates only. Both the absolute UTC
+ * instant and the actual local calendar day are included: user-selected
+ * offsets may cross midnight and timezone rules may change at DST boundaries.
+ * This is neither a halachic calendar nor a source of authoritative zmanim.
+ */
+export function estimateJson(result, cityName = '') {
+  if (!result || result.approximation !== true ||
+      typeof cityName !== 'string' || cityName.length > 150 ||
+      typeof result.timeZone !== 'string' || result.timeZone.length > 100 ||
+      !Number.isFinite(result.latitude) || result.latitude < -90 || result.latitude > 90 ||
+      !Number.isFinite(result.longitude) || result.longitude < -180 || result.longitude > 180 ||
+      !Number.isInteger(result.candleMinutes) || result.candleMinutes < 0 ||
+      result.candleMinutes > 120 ||
+      !Number.isInteger(result.havdalahMinutes) || result.havdalahMinutes < 0 ||
+      result.havdalahMinutes > 180) {
+    throw new TypeError('Expected a bounded astronomical Shabbat estimate.');
+  }
+  const friday = parseDay(result.friday);
+  const saturday = parseDay(result.saturday);
+  if (friday.getUTCDay() !== 5 ||
+      saturday.getTime() - friday.getTime() !== 86_400_000) {
+    throw new RangeError('Expected consecutive Friday and Saturday calendar dates.');
+  }
+  const localEvent = (date) => {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
+      throw new TypeError('An astronomical event must have a valid instant.');
+    }
+    return {
+      utc: date.toISOString(),
+      localDate: dayInTimeZone(date, result.timeZone),
+      localClock: localClock(date, result.timeZone, 'en-GB'),
+    };
+  };
+  for (const name of ['fridayDaylightMinutes', 'saturdayDaylightMinutes', 'daylightChangeMinutes']) {
+    if (!Number.isSafeInteger(result[name])) {
+      throw new TypeError('Invalid daylight estimate.');
+    }
+  }
+  if (result.fridayDaylightMinutes < 1 || result.fridayDaylightMinutes > 1440 ||
+      result.saturdayDaylightMinutes < 1 || result.saturdayDaylightMinutes > 1440 ||
+      result.saturdayDaylightMinutes - result.fridayDaylightMinutes !== result.daylightChangeMinutes) {
+    throw new RangeError('Inconsistent daylight duration estimates.');
+  }
+  return JSON.stringify({
+    format: 'shabbat-times-astronomical-estimate-v1',
+    approximate: true,
+    authoritative: false,
+    suitableForHalachicDecisions: false,
+    friday: result.friday,
+    saturday: result.saturday,
+    location: {
+      label: cityName, latitude: result.latitude, longitude: result.longitude,
+      timeZone: result.timeZone,
+    },
+    userSelectedOffsetsMinutes: {
+      candleBeforeFridaySunset: result.candleMinutes,
+      havdalahAfterSaturdaySunset: result.havdalahMinutes,
+    },
+    events: {
+      fridaySunrise: localEvent(result.fridaySunrise),
+      fridaySunset: localEvent(result.fridaySunset),
+      candleLightingEstimate: localEvent(result.candleLighting),
+      saturdaySunrise: localEvent(result.saturdaySunrise),
+      saturdaySunset: localEvent(result.saturdaySunset),
+      havdalahEstimate: localEvent(result.havdalah),
+    },
+    daylightMinutes: {
+      friday: result.fridayDaylightMinutes,
+      saturday: result.saturdayDaylightMinutes,
+      change: result.daylightChangeMinutes,
+    },
+    warning: 'Approximate astronomy and user-chosen minute offsets ONLY. Not a halachic calendar. Verify all practical Shabbat and Havdalah times using an authoritative local calendar and qualified guidance.',
+    limitations: 'Ignores elevation, terrain, local atmosphere and halachic definitions of nightfall. Not an authority for candle lighting or Havdalah.',
+  }, null, 2) + '\n';
 }

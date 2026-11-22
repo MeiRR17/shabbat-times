@@ -1,4 +1,4 @@
-import { CITIES, upcomingFriday, calculateShabbat, toIcs } from './src/shabbat.js';
+import { CITIES, upcomingFriday, calculateShabbat, toIcs, estimateJson } from './src/shabbat.js';
 import { dayInTimeZone, localClock } from './src/solar.js';
 
 const $=id=>document.getElementById(id);
@@ -43,7 +43,7 @@ function nearestFriday(){
 function disableOutput(){
   outputRevision++;
   current=null;summary='';
-  for(const id of ['copy','text-export','calendar','print'])$(id).disabled=true;
+  for(const id of ['copy','text-export','json-export','calendar','print'])$(id).disabled=true;
   for(const id of ['friday-sunrise','friday-sunset','candle-time',
     'saturday-sunrise','saturday-sunset','havdalah-time'])$(id).textContent='--:--';
   for(const id of ['friday-daylight','saturday-daylight','daylight-change'])$(id).textContent='—';
@@ -118,7 +118,7 @@ function display(){
         ', שינוי '+$('daylight-change').textContent+'.',
       'הנתונים מחושבים בקירוב בלבד. חובה לאמת בלוח מקומי מוסמך.',
     ].join('\n');
-    for(const id of ['copy','text-export','calendar','print'])$(id).disabled=false;
+    for(const id of ['copy','text-export','json-export','calendar','print'])$(id).disabled=false;
     status('חושב אומדן אסטרונומי ליום שישי '+friday+'. יש לאמת זמנים הלכתיים במקור מוסמך.');
   }catch(error){
     disableOutput();
@@ -169,6 +169,16 @@ $('text-export').addEventListener('click',()=>{
   // Editing location/date/offsets invalidates current and disables this action.
   download(summary+'\n','shabbat-times-estimate-'+current.friday+'.txt','text/plain;charset=utf-8');
   status('סיכום האומדן נשמר כקובץ טקסט עם אזהרת אי־ההסתמכות. אין להשתמש בו במקום לוח הלכתי מוסמך.');
+});
+$('json-export').addEventListener('click',()=>{
+  if(!current)return;
+  try{
+    download(estimateJson(current,displayName),
+      'shabbat-times-estimate-'+current.friday+'.json','application/json;charset=utf-8');
+    status('נשמר דוח JSON אסטרונומי המסומן כאומדן בלבד, לא לזמני שבת מעשיים.');
+  }catch(error){
+    status('ייצוא ה־JSON נכשל: '+error.message,true);
+  }
 });
 $('calendar').addEventListener('click',()=>{
   if(!current)return;
