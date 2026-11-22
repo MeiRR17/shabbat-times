@@ -221,8 +221,15 @@ export function estimateCsv(result) {
     ['havdalah_estimate', snapshot.events.havdalahEstimate,
       snapshot.userSelectedOffsetsMinutes.havdalahAfterSaturdaySunset],
   ];
-  const cell = value => {
+  const cell = (value, numericOffset = false) => {
     let content = String(value);
+    // Signed minute offsets are already bounded by estimateJson(), and
+    // should remain numeric in spreadsheets (not apostrophe-prefixed text).
+    if (numericOffset && value !== '' &&
+        (!Number.isInteger(value) || value < -120 || value > 180)) {
+      throw new TypeError('Invalid user-selected event offset.');
+    }
+    if (numericOffset) return '"' + content + '"';
     // Prevent a user-controlled timezone token from becoming a formula in
     // spreadsheet applications that trim leading whitespace and control marks.
     if (/^[\s\u200B\u200E\u200F\uFEFF]*[=+\-@]/u.test(content)) content = "'" + content;
@@ -238,5 +245,6 @@ export function estimateCsv(result) {
       snapshot.location.timeZone, offset, 'true', 'true',
     ]);
   }
-  return '\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
+  return '\uFEFF' + rows.map(row => row.map((value, index) =>
+    cell(value, index === 5)).join(',')).join('\r\n') + '\r\n';
 }
