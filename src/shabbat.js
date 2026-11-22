@@ -96,11 +96,10 @@ export function foldIcsLine(line) {
 }
 /** Optional calendar export with absolute UTC instants and clear draft labels. */
 export function toIcs(result,cityName='') {
-  if (!result || typeof result !== 'object') throw new TypeError('Expected a Shabbat estimate.');
-  parseDay(result.friday);
-  if (typeof cityName !== 'string' || cityName.length > 150) {
-    throw new RangeError('City label must be 150 characters or fewer.');
-  }
+  // ICS is just as shareable as CSV or JSON: refuse malformed, stale or
+  // contradictory calculated models before publishing absolute UTC instants.
+  // The validated JSON snapshot is transient; it is not embedded in ICS.
+  estimateJson(result, cityName);
   const events=[
     { start:result.candleLighting, label:'הדלקת נרות — אומדן בלבד' },
     { start:result.havdalah, label:'הבדלה — אומדן בלבד' },
@@ -203,6 +202,24 @@ export function estimateJson(result, cityName = '') {
     saturdaySunset: localEvent(result.saturdaySunset),
     havdalahEstimate: localEvent(result.havdalah),
   };
+  // Reconcile the exported civil days, elapsed daylight and user-selected
+  // minute offsets with the actual UTC instants. Otherwise a mutated object
+  // can publish contradictory but individually well-formed event times.
+  if (events.fridaySunrise.localDate !== result.friday ||
+      events.fridaySunset.localDate !== result.friday ||
+      events.saturdaySunrise.localDate !== result.saturday ||
+      events.saturdaySunset.localDate !== result.saturday) {
+    throw new RangeError('Sunrise or sunset does not belong to its stated local calendar day.');
+  }
+  const elapsed = (later, earlier) => later.getTime() - earlier.getTime();
+  if (elapsed(result.fridaySunset, result.fridaySunrise) <= 0 ||
+      elapsed(result.saturdaySunset, result.saturdaySunrise) <= 0 ||
+      Math.round(elapsed(result.fridaySunset, result.fridaySunrise) / 60_000) !== result.fridayDaylightMinutes ||
+      Math.round(elapsed(result.saturdaySunset, result.saturdaySunrise) / 60_000) !== result.saturdayDaylightMinutes ||
+      elapsed(result.fridaySunset, result.candleLighting) !== result.candleMinutes * 60_000 ||
+      elapsed(result.havdalah, result.saturdaySunset) !== result.havdalahMinutes * 60_000) {
+    throw new RangeError('Astronomical event times, daylight durations or selected minute offsets do not reconcile.');
+  }
   const offsetChangeObserved = new Set(
     Object.values(events).map(event => event.utcOffsetMinutes)
   ).size > 1;
