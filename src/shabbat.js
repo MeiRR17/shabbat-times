@@ -125,6 +125,32 @@ export function toIcs(result,cityName='') {
 
 
 /**
+ * Offset between the event's IANA-zone civil minute and its UTC minute.
+ * Local and UTC clocks are compared for the SAME instant, avoiding a false
+ * assumption that the viewer's zone or one day's offset applies to all.
+ * Minute precision matches the rest of the displayed event information.
+ */
+export function eventUtcOffsetMinutes(instant, timeZone) {
+  if (!(instant instanceof Date) || !Number.isFinite(instant.getTime()) ||
+      typeof timeZone !== 'string' || !timeZone.trim()) {
+    throw new TypeError('Valid astronomical event and IANA zone required.');
+  }
+  const date = dayInTimeZone(instant, timeZone);
+  const clock = localClock(instant, timeZone, 'en-GB');
+  const m = /^(\d{2}):(\d{2})$/.exec(clock);
+  if (!m) throw new TypeError('Unexpected local clock format.');
+  const [year, month, day] = date.split('-').map(Number);
+  const localEpoch = Date.UTC(year, month - 1, day, Number(m[1]), Number(m[2]));
+  const utcEpoch = Date.UTC(instant.getUTCFullYear(), instant.getUTCMonth(),
+    instant.getUTCDate(), instant.getUTCHours(), instant.getUTCMinutes());
+  const minutes = (localEpoch - utcEpoch) / 60000;
+  if (!Number.isInteger(minutes) || Math.abs(minutes) > 24 * 60) {
+    throw new RangeError('Invalid timezone offset for event.');
+  }
+  return minutes;
+}
+
+/**
  * Machine-readable astronomical estimates only. Both the absolute UTC
  * instant and the actual local calendar day are included: user-selected
  * offsets may cross midnight and timezone rules may change at DST boundaries.
@@ -156,6 +182,7 @@ export function estimateJson(result, cityName = '') {
       utc: date.toISOString(),
       localDate: dayInTimeZone(date, result.timeZone),
       localClock: localClock(date, result.timeZone, 'en-GB'),
+      utcOffsetMinutes: eventUtcOffsetMinutes(date, result.timeZone),
     };
   };
   for (const name of ['fridayDaylightMinutes', 'saturdayDaylightMinutes', 'daylightChangeMinutes']) {
@@ -168,6 +195,17 @@ export function estimateJson(result, cityName = '') {
       result.saturdayDaylightMinutes - result.fridayDaylightMinutes !== result.daylightChangeMinutes) {
     throw new RangeError('Inconsistent daylight duration estimates.');
   }
+  const events = {
+    fridaySunrise: localEvent(result.fridaySunrise),
+    fridaySunset: localEvent(result.fridaySunset),
+    candleLightingEstimate: localEvent(result.candleLighting),
+    saturdaySunrise: localEvent(result.saturdaySunrise),
+    saturdaySunset: localEvent(result.saturdaySunset),
+    havdalahEstimate: localEvent(result.havdalah),
+  };
+  const offsetChangeObserved = new Set(
+    Object.values(events).map(event => event.utcOffsetMinutes)
+  ).size > 1;
   return JSON.stringify({
     format: 'shabbat-times-astronomical-estimate-v1',
     approximate: true,
@@ -183,14 +221,8 @@ export function estimateJson(result, cityName = '') {
       candleBeforeFridaySunset: result.candleMinutes,
       havdalahAfterSaturdaySunset: result.havdalahMinutes,
     },
-    events: {
-      fridaySunrise: localEvent(result.fridaySunrise),
-      fridaySunset: localEvent(result.fridaySunset),
-      candleLightingEstimate: localEvent(result.candleLighting),
-      saturdaySunrise: localEvent(result.saturdaySunrise),
-      saturdaySunset: localEvent(result.saturdaySunset),
-      havdalahEstimate: localEvent(result.havdalah),
-    },
+    events,
+    offsetChangeObserved,
     daylightMinutes: {
       friday: result.fridayDaylightMinutes,
       saturday: result.saturdayDaylightMinutes,
@@ -237,14 +269,15 @@ export function estimateCsv(result) {
   };
   const rows = [[
     'event', 'utc_instant', 'local_date', 'local_clock', 'timezone',
-    'offset_minutes_from_sunset', 'approximate', 'not_for_halachic_decisions',
+    'utc_offset_minutes', 'offset_minutes_from_sunset',
+    'approximate', 'not_for_halachic_decisions',
   ]];
   for (const [name, instant, offset] of events) {
     rows.push([
       name, instant.utc, instant.localDate, instant.localClock,
-      snapshot.location.timeZone, offset, 'true', 'true',
+      snapshot.location.timeZone, instant.utcOffsetMinutes, offset, 'true', 'true',
     ]);
   }
   return '\uFEFF' + rows.map(row => row.map((value, index) =>
-    cell(value, index === 5)).join(',')).join('\r\n') + '\r\n';
+    cell(value, index === 5 || index === 6)).join(',')).join('\r\n') + '\r\n';
 }

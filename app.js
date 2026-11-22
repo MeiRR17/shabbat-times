@@ -1,4 +1,4 @@
-import { CITIES, upcomingFriday, calculateShabbat, toIcs, estimateJson, estimateCsv } from './src/shabbat.js';
+import { CITIES, upcomingFriday, calculateShabbat, toIcs, estimateJson, estimateCsv, eventUtcOffsetMinutes } from './src/shabbat.js';
 import { dayInTimeZone, localClock } from './src/solar.js';
 
 const $=id=>document.getElementById(id);
@@ -49,6 +49,7 @@ function disableOutput(){
   for(const id of ['friday-daylight','saturday-daylight','daylight-change'])$(id).textContent='—';
   $('display-date').textContent='—';
   $('display-place').textContent='בחר מיקום ולחץ על חישוב';
+  $('offset-warning').textContent='';
 }
 function updateCity(){
   const preset=CITIES.find(item=>item.id===city.value);
@@ -103,6 +104,21 @@ function display(){
     $('friday-daylight').textContent=durationLabel(calculated.fridayDaylightMinutes);
     $('saturday-daylight').textContent=durationLabel(calculated.saturdayDaylightMinutes);
     $('daylight-change').textContent=changeLabel(calculated.daylightChangeMinutes);
+    const events=[
+      calculated.fridaySunrise,calculated.fridaySunset,calculated.candleLighting,
+      calculated.saturdaySunrise,calculated.saturdaySunset,calculated.havdalah,
+    ];
+    const offsets=events.map(event=>eventUtcOffsetMinutes(event,place.timeZone));
+    const changed=new Set(offsets).size>1;
+    const label=value=>'UTC'+(value<0?'−':'+')+
+      String(Math.floor(Math.abs(value)/60)).padStart(2,'0')+':'+
+      String(Math.abs(value)%60).padStart(2,'0');
+    $('offset-warning').textContent=changed
+      ? 'אזהרה: הפרש השעון מ־UTC משתנה בין האירועים המוצגים ('+
+        [...new Set(offsets)].map(label).join(' / ')+
+        '). יש להיזהר בפרשנות השעה המקומית; אין להסתמך על האומדן למעשה.'
+      : 'הפרש מ־UTC באירועים המוצגים: '+label(offsets[0])+
+        '. זו תצוגת אזור זמן בלבד, לא אישור לתקינות זמן הלכתי.';
     $('candle-description').textContent=candleMinutes+' דקות לפני השקיעה (לפי בחירתך)';
     $('havdalah-description').textContent=havdalahMinutes+' דקות לאחר השקיעה (לפי בחירתך)';
     summary=[
@@ -116,6 +132,7 @@ function display(){
         ', הבדלה '+$('havdalah-time').textContent+' ('+havdalahMinutes+' דקות לאחר השקיעה)',
       'משך אור יום משוער: שישי '+$('friday-daylight').textContent+', שבת '+$('saturday-daylight').textContent+
         ', שינוי '+$('daylight-change').textContent+'.',
+      $('offset-warning').textContent,
       'הנתונים מחושבים בקירוב בלבד. חובה לאמת בלוח מקומי מוסמך.',
     ].join('\n');
     for(const id of ['copy','text-export','json-export','csv-export','calendar','print'])$(id).disabled=false;
