@@ -43,7 +43,7 @@ function nearestFriday(){
 function disableOutput(){
   outputRevision++;
   current=null;summary='';
-  for(const id of ['copy','calendar','print'])$(id).disabled=true;
+  for(const id of ['copy','text-export','calendar','print'])$(id).disabled=true;
   for(const id of ['friday-sunrise','friday-sunset','candle-time',
     'saturday-sunrise','saturday-sunset','havdalah-time'])$(id).textContent='--:--';
   for(const id of ['friday-daylight','saturday-daylight','daylight-change'])$(id).textContent='—';
@@ -118,7 +118,7 @@ function display(){
         ', שינוי '+$('daylight-change').textContent+'.',
       'הנתונים מחושבים בקירוב בלבד. חובה לאמת בלוח מקומי מוסמך.',
     ].join('\n');
-    for(const id of ['copy','calendar','print'])$(id).disabled=false;
+    for(const id of ['copy','text-export','calendar','print'])$(id).disabled=false;
     status('חושב אומדן אסטרונומי ליום שישי '+friday+'. יש לאמת זמנים הלכתיים במקור מוסמך.');
   }catch(error){
     disableOutput();
@@ -162,6 +162,13 @@ $('copy').addEventListener('click',async()=>{
     if(revision===outputRevision)
       status('אין גישה ללוח ההעתקה בדפדפן. נסה להעתיק ידנית.',true);
   }
+});
+$('text-export').addEventListener('click',()=>{
+  if(!current || !summary)return;
+  // Export the same snapshot and non-authoritative notice used for Copy.
+  // Editing location/date/offsets invalidates current and disables this action.
+  download(summary+'\n','shabbat-times-estimate-'+current.friday+'.txt','text/plain;charset=utf-8');
+  status('סיכום האומדן נשמר כקובץ טקסט עם אזהרת אי־ההסתמכות. אין להשתמש בו במקום לוח הלכתי מוסמך.');
 });
 $('calendar').addEventListener('click',()=>{
   if(!current)return;
